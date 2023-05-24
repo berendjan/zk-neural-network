@@ -40,6 +40,7 @@ python3 generate_run_script.py
 
 ```bash
 # in zokrates/ directory
+chmod +x ./run.sh
 ./run.sh
 
 # to run all zokrates unit tests

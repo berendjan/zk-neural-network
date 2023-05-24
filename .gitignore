@@ -6,7 +6,7 @@ zokrates/out.r1cs
 zokrates/out.wtns
 zokrates/proof.json
 zokrates/proving.key
-zokrates/run_args.sh
+zokrates/run.sh
 zokrates/verification.key
 zokrates/verifier.sol
 zokrates/witness
