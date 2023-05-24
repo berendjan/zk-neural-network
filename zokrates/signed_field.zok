@@ -1,0 +1,177 @@
+// Written by Berend-Jan Lange 2023
+
+import "utils/casts/field_to_u64";
+
+/**
+ * FixedPrecisionUInt64 logic
+ */
+struct FixedPrecisionUInt64 {
+    u64 f;
+}
+
+// Addition
+def add(FixedPrecisionUInt64 a, FixedPrecisionUInt64 b) -> FixedPrecisionUInt64 {
+    return FixedPrecisionUInt64 { f: a.f + b.f };
+}
+
+// Multiplication
+def mul<P>(FixedPrecisionUInt64 a, FixedPrecisionUInt64 b) -> FixedPrecisionUInt64 {
+    return FixedPrecisionUInt64 { f: (a.f * b.f) / field_to_u64(10 ** P) };
+}
+
+// Difference
+def diff(FixedPrecisionUInt64 a, FixedPrecisionUInt64 b) -> FixedPrecisionUInt64 {
+    return FixedPrecisionUInt64 { f: if a.f > b.f { a.f - b.f } else { b.f - a.f } };
+}
+
+// Maximum
+def max(FixedPrecisionUInt64 a, FixedPrecisionUInt64 b) -> FixedPrecisionUInt64 {
+    return FixedPrecisionUInt64 { f: if a.f > b.f { a.f } else { b.f } };
+}
+
+// Minimum
+def min(FixedPrecisionUInt64 a, FixedPrecisionUInt64 b) -> FixedPrecisionUInt64 {
+    return FixedPrecisionUInt64 { f: if a.f < b.f { a.f } else { b.f } };
+}
+
+// Test FixedPrecisionUInt64
+const u32 TEST_FIXED_PRECISION_UINT64_PRECISION = 3;
+def test_fixed_precision_uint6464() {
+    FixedPrecisionUInt64 a = FixedPrecisionUInt64 { f: 5000 };
+    FixedPrecisionUInt64 a_add_a = FixedPrecisionUInt64 { f: 10000 };
+    FixedPrecisionUInt64 a_mul_a = FixedPrecisionUInt64 { f: 25000 };
+    FixedPrecisionUInt64 a_diff_a = FixedPrecisionUInt64 { f: 0 };
+    FixedPrecisionUInt64 one = FixedPrecisionUInt64 { f: 1 };
+    FixedPrecisionUInt64 indivisable = FixedPrecisionUInt64 { f: 1001 };
+    
+
+    assert(add(a, a).f == a_add_a.f);
+    assert(mul::<TEST_FIXED_PRECISION_UINT64_PRECISION>(a, a).f == a_mul_a.f);
+    assert(diff(a, a).f == a_diff_a.f);
+    assert(diff(add(a_add_a, a_add_a), a_mul_a).f == a.f);
+    assert(mul::<TEST_FIXED_PRECISION_UINT64_PRECISION>(a, a_diff_a).f == 0);
+    assert(mul::<TEST_FIXED_PRECISION_UINT64_PRECISION>(one, one).f == 0);
+    assert(mul::<TEST_FIXED_PRECISION_UINT64_PRECISION>(one, indivisable).f == 1);
+    assert(max(a, a).f == a.f);
+    assert(max(a, one).f == a.f);
+    assert(min(a, a).f == a.f);
+    assert(min(a, one).f == one.f);
+}
+
+/**
+ * SignedField logic
+ * positive if sign == false
+ */
+struct SignedField {
+    FixedPrecisionUInt64 f;
+    bool sign;
+}
+
+// SignedField Addition helper
+def sign_after_add(SignedField a, SignedField b) -> bool {
+    return if (a.f.f > b.f.f && a.sign) || (b.f.f > a.f.f && b.sign) { true } else { false };
+}
+
+// Addition
+def add(SignedField a, SignedField b) -> SignedField {
+    return if a.sign == b.sign {
+        SignedField {
+            f: add(a.f, b.f),
+            sign: a.sign
+        }    
+    } else {
+        SignedField {
+            f: diff(a.f, b.f),
+            sign: sign_after_add(a, b)
+        }
+    };
+}
+
+// Multiplication
+def mul<P>(SignedField a, SignedField b) -> SignedField {
+    return SignedField {
+        f: mul::<P>(a.f, b.f),
+        sign: if mul::<P>(a.f, b.f).f > 0 { a.sign != b.sign } else { false }
+    };
+}
+
+// Maximum
+def max(SignedField a, SignedField b) -> SignedField {
+    return if a.sign == b.sign {
+        SignedField {
+            f: if a.sign { min(a.f, b.f) } else { max(a.f, b.f) },
+            sign: a.sign
+        }
+    } else {
+        SignedField {
+            f: if a.sign { b.f } else { a.f },
+            sign: false
+        }
+    };
+}
+
+// Equality
+def eq(SignedField a, SignedField b) -> bool {
+    return a.f.f == b.f.f && a.sign == b.sign;
+}
+
+// Test Signed Field
+const u32 TEST_SIGNED_FIELD_PRECISION = 3;
+def test_signed_field() {
+    SignedField a = SignedField { f: FixedPrecisionUInt64 { f: 5000 }, sign: false };
+    SignedField minus_one = SignedField { f: FixedPrecisionUInt64 { f: 1000 }, sign: true };
+    SignedField a_add_a = SignedField { f: FixedPrecisionUInt64 { f: 10000 }, sign: false };
+    SignedField a_mul_a = SignedField { f: FixedPrecisionUInt64 { f: 25000 }, sign: false };
+    SignedField a_mul_minus_one = SignedField { f: FixedPrecisionUInt64 { f: 5000 }, sign: true };
+    SignedField b = SignedField { f: FixedPrecisionUInt64 { f: 10000 }, sign: true };
+    SignedField a_add_b = SignedField { f: FixedPrecisionUInt64 { f: 5000 }, sign: true };
+    SignedField zero = SignedField { f: FixedPrecisionUInt64 { f: 0 }, sign: false };
+    SignedField milli = SignedField { f: FixedPrecisionUInt64 { f: 1 }, sign: false };
+    SignedField neg_milli = SignedField { f: FixedPrecisionUInt64 { f: 1 }, sign: true };
+
+
+    assert(eq(a, a));
+    assert(!eq(milli, neg_milli));
+    assert(eq(add(a, a), a_add_a));
+    assert(eq(mul::<TEST_SIGNED_FIELD_PRECISION>(a, a), a_mul_a));
+    assert(eq(mul::<TEST_SIGNED_FIELD_PRECISION>(a, minus_one), a_mul_minus_one));
+    assert(eq(add(a, b), a_add_b));
+    assert(eq(add(b, a), a_add_b));
+    assert(eq(add(a, zero), a));
+    assert(eq(mul::<TEST_SIGNED_FIELD_PRECISION>(milli, neg_milli), zero));
+    assert(eq(mul::<TEST_SIGNED_FIELD_PRECISION>(milli, milli), zero));
+    assert(eq(mul::<TEST_SIGNED_FIELD_PRECISION>(a, zero), zero));
+    assert(eq(max(a, a), a));
+    assert(eq(max(a, b), a));
+    assert(eq(max(b, a), a));
+    assert(eq(max(a, milli), a));
+}
+
+// Parse u64 array
+def parse_u64<N>(u64[N] input) -> SignedField[N] {
+    SignedField zero = SignedField { f: FixedPrecisionUInt64 { f: 0 }, sign: false };
+    SignedField[N] mut output = [zero;N];
+    for u32 j in 0..N {
+        output[j].f.f = input[j];
+    }
+    return output;
+}
+
+def test_parse_u64() {
+    u64[2] input = [10000, 20000];
+    SignedField[2] to_check = [
+        SignedField { f: FixedPrecisionUInt64 { f: 10000 }, sign: false },
+        SignedField { f: FixedPrecisionUInt64 { f: 20000 }, sign: false }
+    ];
+    SignedField[2] output = parse_u64(input);
+
+    assert(eq(to_check[0], output[0]));
+    assert(eq(to_check[1], output[1]));
+}
+
+def main() {
+    () t1 = test_fixed_precision_uint6464();
+    () t2 = test_signed_field();
+    () t3 = test_parse_u64();
+}
+

@@ -1,0 +1,122 @@
+// Written by Berend-Jan Lange 2023
+
+from "./signed_field" import SignedField, FixedPrecisionUInt64, mul, add, max, eq;
+
+/**
+ * Fully Connected Layer
+ * 
+ * Performs matrix multiplication and adds bias
+ * PyTorch outputs params of X in reverse order of dimensions
+ * so we write y[N] * X[M][N] + b[M]
+ */
+def fully_connected<P,N,M>(SignedField[N] input, SignedField[M][N] weights, SignedField[M] mut bias) -> SignedField[M] {    
+    for u32 j in 0..M {
+        for u32 i in 0..N {
+            SignedField multiplied = mul::<P>(input[i], weights[j][i]);
+            bias[j] = add(bias[j], multiplied);
+        }
+    }
+    return bias;
+}
+
+// Test Fully Connected Layer
+const u32 TEST_FULLY_CONNECTED_LAYER_PRECISION = 4;
+const u32 TEST_INPUT_SIZE = 3;
+const u32 TEST_OUTPUT_SIZE = 2;
+def test_fully_connected_layer() {
+    SignedField[3] input = [
+        SignedField { f: FixedPrecisionUInt64 { f: 12000 }, sign: false },
+        SignedField { f: FixedPrecisionUInt64 { f: 9000 }, sign: false },
+        SignedField { f: FixedPrecisionUInt64 { f: 3000 }, sign: false }
+    ];
+    SignedField[2][3] w = [
+        [
+            SignedField { f: FixedPrecisionUInt64 { f: 7000 }, sign: false },
+            SignedField { f: FixedPrecisionUInt64 { f: 14000 }, sign: false },
+            SignedField { f: FixedPrecisionUInt64 { f: 21000 }, sign: false }
+        ],
+        [
+            SignedField { f: FixedPrecisionUInt64 { f: 18000 }, sign: false },
+            SignedField { f: FixedPrecisionUInt64 { f: 2000 }, sign: false },
+            SignedField { f: FixedPrecisionUInt64 { f: 9000 }, sign: false }
+        ]
+    ];
+    SignedField[2] b = [
+        SignedField { f: FixedPrecisionUInt64 { f: 2000 }, sign: false },
+        SignedField { f: FixedPrecisionUInt64 { f: 5000 }, sign: false }
+    ];
+
+    SignedField[2] output = fully_connected::<TEST_FULLY_CONNECTED_LAYER_PRECISION, TEST_INPUT_SIZE, TEST_OUTPUT_SIZE>(input, w, b);
+    assert(output[0].sign == false && output[0].f.f == 29300);
+    assert(output[1].sign == false && output[1].f.f == 31100);
+}
+
+// Rectified Linear Unit
+def relu<N>(SignedField[N] mut a) -> SignedField[N] {
+    SignedField zero = SignedField { f: FixedPrecisionUInt64 { f: 0 }, sign: false };
+    for u32 i in 0..N {
+        a[i] = if a[i].sign { zero } else { a[i] };
+    }
+    return a;
+}
+
+// Test RELU
+def test_relu() {
+    SignedField[2] inputs = [
+        SignedField { f: FixedPrecisionUInt64 { f: 1234 }, sign: true },
+        SignedField { f: FixedPrecisionUInt64 { f: 1234 }, sign: false }
+    ];
+    SignedField zero = SignedField { f: FixedPrecisionUInt64 { f: 0 }, sign: false };
+    SignedField[2] outputs = relu::<2>(inputs);
+    
+    assert(eq(outputs[0], zero));
+    assert(eq(outputs[1], inputs[1]));
+}
+
+
+// Find index of maximum in array
+def find_index_max<N>(SignedField[N] input) -> u32 {
+    SignedField mut max_field = input[0];
+    u32 mut max_index = 0;
+    for u32 i in 1..N {
+        SignedField to_check = input[i];
+        SignedField max_to_check = max(max_field, to_check);
+        max_index = if eq(max_to_check, to_check) { i } else { max_index };
+        max_field = max_to_check;
+    }
+    return max_index;
+}
+
+// Test Find Index Maximum
+def test_find_index_max() {
+    SignedField[4] input4 = [
+        SignedField { f: FixedPrecisionUInt64 { f: 9000 }, sign: true },
+        SignedField { f: FixedPrecisionUInt64 { f: 12000 }, sign: true },
+        SignedField { f: FixedPrecisionUInt64 { f: 3001 }, sign: true },
+        SignedField { f: FixedPrecisionUInt64 { f: 3000 }, sign: true }
+    ];
+    SignedField[3] input3 = [
+        SignedField { f: FixedPrecisionUInt64 { f: 9000 }, sign: false },
+        SignedField { f: FixedPrecisionUInt64 { f: 12000 }, sign: false },
+        SignedField { f: FixedPrecisionUInt64 { f: 3000 }, sign: false }
+    ];
+    SignedField[2] input2 = [
+        SignedField { f: FixedPrecisionUInt64 { f: 12000 }, sign: true },
+        SignedField { f: FixedPrecisionUInt64 { f: 3000 }, sign: false }
+    ];
+    SignedField[1] input1 = [
+        SignedField { f: FixedPrecisionUInt64 { f: 12000 }, sign: true }
+    ];
+    
+    assert(find_index_max::<4>(input4) == 3);
+    assert(find_index_max::<3>(input3) == 1);
+    assert(find_index_max::<2>(input2) == 1);
+    assert(find_index_max::<1>(input1) == 0);
+}
+
+def main() {
+    () t3 = test_fully_connected_layer();
+    () t4 = test_relu();
+    () t5 = test_find_index_max();
+}
+

@@ -1,0 +1,20 @@
+// Written by Berend-Jan Lange 2023
+
+from "./model_params" import PRECISION, WEIGHTS_1, WEIGHTS_2, BIAS_1, BIAS_2, WEIGHTS_1_OUTPUT_SIZE, WEIGHTS_2_OUTPUT_SIZE;
+from "./signed_field" import SignedField, parse_u64;
+from "./layers" import fully_connected, relu, find_index_max;
+
+const u32 INPUT_SIZE = 28*28;
+
+def main(private u64[INPUT_SIZE] input, u32 class) {
+    
+    SignedField[INPUT_SIZE] signed_input = parse_u64(input);
+    SignedField[WEIGHTS_1_OUTPUT_SIZE] l1_output = fully_connected::<PRECISION, INPUT_SIZE, WEIGHTS_1_OUTPUT_SIZE>(signed_input, WEIGHTS_1, BIAS_1);
+    SignedField[WEIGHTS_1_OUTPUT_SIZE] l1_relu = relu::<WEIGHTS_1_OUTPUT_SIZE>(l1_output);
+    SignedField[WEIGHTS_2_OUTPUT_SIZE] l2_output = fully_connected::<PRECISION, WEIGHTS_1_OUTPUT_SIZE, WEIGHTS_2_OUTPUT_SIZE>(l1_relu, WEIGHTS_2, BIAS_2);
+
+    u32 max_index = find_index_max::<WEIGHTS_2_OUTPUT_SIZE>(l2_output);
+    
+    assert(max_index == class);
+}
+

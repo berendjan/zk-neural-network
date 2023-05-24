@@ -1,0 +1,21 @@
+#!/bin/bash
+
+set -e
+
+# compiling (takes long time)
+zokrates compile -i network.zok
+# perform the setup phase
+zokrates setup
+
+# execute the program
+zokrates compute-witness -a \{% for argrow in args %}
+{% for arg in argrow %}{{ '%8s'|format(arg) }} {% endfor %} \{% endfor %}
+{{ output }}
+
+# generate a proof of computation
+zokrates generate-proof
+# export a solidity verifier
+zokrates export-verifier
+# or verify natively
+zokrates verify
+

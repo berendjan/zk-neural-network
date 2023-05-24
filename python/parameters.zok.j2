@@ -1,0 +1,17 @@
+from "./signed_field" import SignedField, FixedPrecisionUInt64;
+const u32 PRECISION = {{ precision }};{% set scaling_factor = 10 ** precision %}
+const u32 INPUT_SIZE = {{ weights[0][0]|length }};
+{% for tensor in weights %}
+const u32 WEIGHTS_{{ loop.index }}_OUTPUT_SIZE = {{ tensor|length }};
+const SignedField[{{ tensor|length }}][{{ tensor[0]|length }}] WEIGHTS_{{ loop.index }} = [{% for row in tensor %}
+    [{% for value in row %}
+        SignedField { f: FixedPrecisionUInt64 { f: {{ (value.item()*scaling_factor)|int }} }, sign: {% if value.item() < 0 %}true{% else %}false{% endif %} }{% if not loop.last %},{% endif %}{% endfor %}
+    ]{% if not loop.last %},{% endif %}{% endfor %}
+];
+{% endfor %}
+
+{% for tensor in biases %}
+const SignedField[{{ tensor|length }}] BIAS_{{ loop.index }} = [{% for value in tensor %}
+    SignedField { f: FixedPrecisionUInt64 { f: {{ (value.item()*scaling_factor)|int }} }, sign: {% if value.item() < 0 %}true{% else %}false{% endif %} }{% if not loop.last %},{% endif %}{% endfor %}
+];
+{% endfor %}
