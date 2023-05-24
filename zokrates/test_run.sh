@@ -2,7 +2,7 @@
 
 set -e
 
-for FILE in layers.zok, signed_field.zok
+for FILE in layers.zok signed_field.zok
 do
     # compile
     zokrates compile -i $FILE --debug
