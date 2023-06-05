@@ -4,7 +4,7 @@ from "./model_params" import PRECISION, WEIGHTS_1, WEIGHTS_2, BIAS_1, BIAS_2, WE
 from "./signed_field" import SignedField, parse_u64;
 from "./layers" import fully_connected, relu, find_index_max;
 
-const u32 INPUT_SIZE = 28*28;
+const u32 INPUT_SIZE = 14*14;
 
 def main(private u64[INPUT_SIZE] input, u32 class) {
     
@@ -13,7 +13,12 @@ def main(private u64[INPUT_SIZE] input, u32 class) {
     SignedField[WEIGHTS_1_OUTPUT_SIZE] l1_relu = relu::<WEIGHTS_1_OUTPUT_SIZE>(l1_output);
     SignedField[WEIGHTS_2_OUTPUT_SIZE] l2_output = fully_connected::<PRECISION, WEIGHTS_1_OUTPUT_SIZE, WEIGHTS_2_OUTPUT_SIZE>(l1_relu, WEIGHTS_2, BIAS_2);
 
+    for u32 i in 0..WEIGHTS_2_OUTPUT_SIZE {
+        log("{} {}", l2_output[i].f.f, l2_output[i].sign);
+    }
+
     u32 max_index = find_index_max::<WEIGHTS_2_OUTPUT_SIZE>(l2_output);
+    log("max_index is {}", max_index);
     
     assert(max_index == class);
 }

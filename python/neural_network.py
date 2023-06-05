@@ -2,14 +2,39 @@ import torch
 from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import datasets
-from torchvision.transforms import ToTensor
+from torchvision.transforms import ToTensor, Resize, Compose
+import numpy as np
+import random
+
+# Set the random seed for PyTorch
+seed = 42
+torch.manual_seed(seed)
+
+# Set the random seed for CUDA (if available)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+
+# Set the random seed for Python's built-in random module
+random.seed(seed)
+
+# Set the random seed for NumPy
+np.random.seed(seed)
+
+# Enable deterministic behavior in CuDNN (if available)
+torch.backends.cudnn.deterministic = True
+torch.backends.cudnn.benchmark = False
+
+size = (14,14)
+
+transform = Compose([Resize(size), ToTensor()])
 
 # Download training data from open datasets.
 training_data = datasets.MNIST(
     root="data",
     train=True,
     download=True,
-    transform=ToTensor(),
+    transform=transform,
 )
 
 # Download test data from open datasets.
@@ -17,7 +42,7 @@ test_data = datasets.MNIST(
     root="data",
     train=False,
     download=True,
-    transform=ToTensor(),
+    transform=transform,
 )
 
 batch_size = 64
@@ -46,20 +71,14 @@ print(f"Using {device} device")
 class Classifier(torch.nn.Module):
     def __init__(self, **kwargs):
         super(Classifier, self).__init__()
-        self.neurons = 28 * 28
+        self.neurons = size[0] * size[1]
         self.fc1 = torch.nn.Linear(self.neurons, 16)
-        # self.fc2 = torch.nn.Linear(128, 64)
-        # self.fc3 = torch.nn.Linear(16, 16)
-        self.fc4 = torch.nn.Linear(16, 10)
+        self.fc2 = torch.nn.Linear(16, 10)
 
     def forward(self, x):
         x = self.fc1(x.view(-1, self.neurons))
-        # x = torch.relu(x)
-        # x = self.fc2(x)
-        # x = torch.relu(x)
-        # x = self.fc3(x)
         x = torch.relu(x)
-        x = self.fc4(x)
+        x = self.fc2(x)
         return x
 
 

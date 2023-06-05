@@ -1,16 +1,20 @@
 import torch
 from torch.utils.data import DataLoader
 from torchvision import datasets
-from torchvision.transforms import ToTensor
 from jinja2 import Environment, FileSystemLoader
+from torchvision.transforms import ToTensor, Resize, Compose
 import matplotlib.pyplot as plt
+
+size = (14,14)
+
+transform = Compose([Resize(size), ToTensor()])
 
 
 test_data = datasets.MNIST(
     root="data",
     train=False,
     download=True,
-    transform=ToTensor(),
+    transform=transform,
 )
 
 batch_size = 1
