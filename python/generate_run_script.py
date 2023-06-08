@@ -5,6 +5,8 @@ from jinja2 import Environment, FileSystemLoader
 from torchvision.transforms import ToTensor, Resize, Compose
 import matplotlib.pyplot as plt
 
+NUM_TO_CHECK = 1
+
 size = (14,14)
 
 transform = Compose([Resize(size), ToTensor()])
@@ -22,13 +24,13 @@ batch_size = 1
 test_dataloader = DataLoader(test_data, batch_size=batch_size)
 
 for X, y in test_dataloader:
-    first_X = X
     print(f"Shape of X [N, C, H, W]: {X.shape} {X.dtype}")
-    first_y = y
     print(f"Shape of y: {y.shape} {y.dtype} {y}")
-    break
 
-test_img = first_X[0][0]
+    if y[0] == NUM_TO_CHECK:
+        break
+
+test_img = X[0][0]
 
 
 def print_test_img(img):
@@ -53,7 +55,7 @@ print(fixed_precision.shape)
 
 env = Environment(loader=FileSystemLoader("."))
 template = env.get_template("run.sh.j2")
-rendered = template.render(args=fixed_precision, output=first_y.numpy()[0])
+rendered = template.render(args=fixed_precision, output=y.numpy()[0])
 
 output_file = "../zokrates/run.sh"
 
